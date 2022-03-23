@@ -1,0 +1,25 @@
+build-magic:
+  - stage:
+      name: Docker build example
+      runner: vagrant
+      environment: Vagrantfile
+      working directory: /app
+      parameters:
+        bind: /app
+      commands:
+        - install: sudo apk update && sudo apk add docker curl
+          label: Install docker and curl
+        - execute: sudo service docker start
+          label: Start dockerd
+        - build: sudo docker build -t {{ app }} .
+          label: Build docker image
+        - execute: sudo docker run -d --rm --name {{ app }} -p {{ port }}:3000 {{ app }}
+          label: Run the docker container
+        - execute: sleep 5
+          label: Wait 5 seconds for the container to start
+        - test: export RESULT=`curl -s http://localhost:{{ port }}` && test "$RESULT" = '{"message":"Hello World"}'
+          label: Test the endpoint
+        - execute: sudo docker stop {{ app }}
+          label: Stop the docker container
+        - execute: sudo docker tag {{ app }}:latest {{ account_id }}.dkr.ecr.us-east-1.amazonaws.com/{{ app }}:latest
+        - release: sudo docker push {{ account_id }}.dkr.ecr.us-east-1.amazonaws.com/{{ app }}:latest

@@ -1,0 +1,1 @@
+build-magic -C build_docs.yaml

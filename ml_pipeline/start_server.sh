@@ -1,0 +1,1 @@
+docker run -d -p 3000:3000 -v $PWD/data/deploy:/app/data/deploy:ro --name model_server model_server

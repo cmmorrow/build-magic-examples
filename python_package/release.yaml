@@ -1,0 +1,18 @@
+build-magic:
+  - stage:
+      name: Run Tests
+      commands:
+        - execute: flake8 --count --show-source --statistics
+        - test: pytest -c unit_test.toml
+  - stage:
+      name: Build Documentation
+      action: cleanup
+      commands:
+        - build: mkdocs build
+        - deploy: mkdocs gh-deploy
+  - stage:
+      name: Deploy to PyPI
+      action: cleanup
+      commands:
+        - build: python setup.py sdist bdist_wheel --universal
+        - release: twine upload dist/*

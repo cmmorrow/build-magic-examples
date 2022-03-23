@@ -1,0 +1,28 @@
+build-magic:
+  - stage:
+      name: etl
+      commands:
+        - execute: curl "http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv" --output {{ filename }}.csv
+          label: Download the dataset
+        - execute: python3 etl.py {{ filename }}.csv
+          label: Convert the dataset to Arrow
+        - execute: mv {{ filename }}.feather data/input
+        - execute: rm {{ filename }}.csv
+  - stage:
+      name: train
+      commands:
+        - execute: python3 train.py data/input/{{ filename }}.feather 0.1 0.1 > data/stats/{{ filename }}.stats
+          label: Train the model
+        - execute: mv {{ filename }}.pickle data/models/{{ filename }}.pickle
+        - execute: gpg --output data/models/{{ filename }}.sig -se -r {{ user }} data/models/{{ filename }}.pickle
+          label: Sign and encrypt the model
+  - stage:
+      name: deploy
+      commands:
+        - execute: rm -f data/deploy/*
+        - execute: cp data/models/{{ filename }}.sig data/deploy
+        - execute: gpg --output data/deploy/{{ filename }}.pickle -d data/deploy/{{ filename }}.sig
+          label: Verify and decrypt the model
+        - execute: rm data/deploy/{{ filename }}.sig
+        - execute: docker restart {{ server }}
+          label: Restart the web server

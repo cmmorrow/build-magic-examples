@@ -1,0 +1,38 @@
+build-magic:
+  - stage:
+      name: prep
+      commands:
+        - build: docker build -t fetch ./fetch
+        - build: docker build -t widdershins ./widdershins
+        - build: docker build -t slate ./slate
+  - stage:
+      name: fetch
+      runner: docker
+      environment: fetch
+      commands: 
+        - execute: wget https://petstore3.swagger.io/api/v3/openapi.json
+        - execute: cat openapi.json | jq > petstore3.json
+        - execute: rm openapi.json
+  - stage:
+      name: convert
+      runner: docker
+      environment: widdershins
+      commands:
+        - execute: widdershins --summary petstore3.json petstore3.md
+  - stage:
+      name: build
+      runner: docker
+      environment: slate
+      working directory: /srv/slate/source
+      parameters:
+        bind: /app
+      commands:
+        - execute: cp /app/petstore3.md /srv/slate/source/index.html.md
+        - build: bundle exec middleman build
+        - execute: cp -r /srv/slate/build /app
+  - stage:
+      name: cleanup
+      commands:
+        - execute: docker rmi fetch
+        - execute: docker rmi widdershins
+        - execute: docker rmi slate
